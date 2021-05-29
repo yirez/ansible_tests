@@ -1,43 +1,126 @@
-https://www.digitalocean.com/community/tutorials/how-to-install-elasticsearch-logstash-and-kibana-elastic-stack-on-centos-7
+#!/bin/sh
+set -e
+set -o pipefail
 
-rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
 
-if grep -Fxq "elasticsearch" /etc/yum.repos.d/elasticsearch.repo
+echo "**************************************"  
+echo "Deploys elastic and kibana to given server"
+echo "**************************************"
+echo ""
+echo ""
+
+
+# Exit script after printing help
+helpFunction()
+{
+   echo ""
+   echo "Usage: $0 target_server target_local_ip"
+   exit 1
+}
+
+# Begin script in case all parameters are correct
+echo "target_server: $1"
+echo "target_local_ip: $2"
+
+target_server=$1
+server_ip=$2
+
+# Print helpFunction in case parameters are empty
+if [ -z "$target_server" ] || [ -z "$server_ip" ]
 then
-    echo "elastic repo exists"
-else
-    cat <<FF >>
-[elasticsearch-6.x]
-name=Elasticsearch repository for 6.x packages
-baseurl=https://artifacts.elastic.co/packages/6.x/yum
-gpgcheck=1
-gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
-enabled=1
-autorefresh=1
-type=rpm-md
-FF
-
+   echo "Missing parameters";
+   helpFunction
 fi
 
-yum install elasticsearch -y
-vi /etc/elasticsearch/elasticsearch.yml \
-&& systemctl start elasticsearch \
-&& systemctl enable elasticsearch \
-&& $(curl -X GET "localhost:9200")
+ssh root@$target_server <<EO_REMOTE
+##TODO why doesn't these work, gets host ip
+#server_ip=$(ip -4 addr show eth0 | awk '/inet/ {print $2}' | sed 's#/.*##')
+#echo "$(who am i)   "
+
+echo " "
+echo "Ready Docker & Compose"
+echo "**************************************"
+yum install -y yum-utils \
+&& yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo \
+&& yum install docker-ce docker-ce-cli containerd.io -y \
+&& systemctl start docker && systemctl enable docker \
+&& yum install -y docker-compose \
+&& echo "Docker & Compose installed"
+
+echo " "
+echo "Install Elastic (Also java if it does not exist)"
+echo "**************************************"
+mkdir /opt/elastic-test
+echo "java home: ${JAVA_HOME}"
+if [ -z "${JAVA_HOME}" ]
+then
+   echo "Missing Java, installing";
+   yum install java-1.8.0-openjdk -y
+fi
+
+if docker top elastic-test
+then
+    echo "Elastic already up"
+else
+cat >/opt/elastic-test/docker-compose.yml <<FF
+version: '3'
+services:
+  elastic-test:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.0
+    container_name: elastic-test
+    environment:
+      - node.name=elastic-test
+      - cluster.name=es-docker-cluster
+      - cluster.initial_master_nodes=elastic-test
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+volumes:
+  data01:
+    driver: local
+FF
+fi
 
 
-yum install kibana -y \
-&& systemctl enable kibana \
-&& systemctl start kibana
+echo " "
+echo "Setup kibana on compose"
+echo "**************************************"
+mkdir /opt/kibana-test
 
-yum install nginx -y
+if docker top kibana-test
+then
+    echo "Kibana already up"
+else
+cat >/opt/kibana-test/docker-compose.yml <<FF
+version: '3'
+services:
+  kibana-test:
+    image: docker.elastic.co/kibana/kibana:7.13.0
+    container_name: kibana-test
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://SERVERIP:9200
+      ELASTICSEARCH_HOSTS: '["http://SERVERIP:9200"]'
+    network_mode: host
+FF
+sed -i "s/SERVERIP/${server_ip}/" /opt/kibana-test/docker-compose.yml
+fi
 
-echo "kibanaadmin:`openssl passwd -apr1`" | sudo tee -a /etc/nginx/htpasswd.users
+cd /opt/kibana-test/ \
+&& docker-compose up -d \
+&& cd /opt/elastic-test \
+&& docker-compose up -d \
+&& echo "Kibana ready at ${target_server}:5601" \
+&& echo "Elastic ready at ${target_server}:9200"
 
-# server_name example.com www.example.com; server ip
-vi /etc/nginx/conf.d/example.com.conf
-
-nginx -t
-
-systemctl restart nginx
-setsebool httpd_can_network_connect 1 -P
+EO_REMOTE

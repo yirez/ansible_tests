@@ -3,7 +3,7 @@ set -e
 set -o pipefail
 
 
-echo "**************************************" 
+echo "**************************************"  
 echo "Creates k8s cluster using kubespray with a master node and worker node"
 echo "**************************************"
 echo ""
@@ -68,7 +68,7 @@ if pip3 install -r requirements.txt
 then
    echo "kubespray requirements installed"
 else
-   yum �y install python3 && yum �y install python3-pip && pip3 install -r requirements.txt
+   yum –y install python3 && yum –y install python3-pip && pip3 install -r requirements.txt
 fi
 
 echo " "
