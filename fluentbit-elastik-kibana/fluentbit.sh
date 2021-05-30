@@ -3,7 +3,7 @@ set -e
 set -o pipefail
 
 
-echo "**************************************"  
+echo "**************************************" 
 echo "Deploys and configures fluentbit"
 echo "**************************************"
 echo ""

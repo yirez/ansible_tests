@@ -37,6 +37,7 @@ data:
                "access":"proxy",
                 "editable": true,
                 "name": "prometheus",
+                "isDefault": true,
                 "orgId": 1,
                 "type": "prometheus",
                 "url": "http://prometheus-service.monitoring.svc:80",

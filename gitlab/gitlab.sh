@@ -30,7 +30,16 @@ then
    helpFunction
 fi
 
+yum install epel-release -y
+yum install jq -y
 ssh root@$target_server <<EO_REMOTE
+
+echo " "
+echo "Install jq for json parsing "
+echo "**************************************"
+yum install epel-release -y
+yum install jq -y
+
 
 echo " "
 echo "Ready Docker & Compose"
@@ -47,36 +56,9 @@ yum install -y yum-utils \
 echo " "
 echo "Install gitlab "
 echo "**************************************"
-mkdir /opt/gitlab-test
-export GITLAB_HOME=/srv/gitlab
+curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.rpm.sh | sudo bash
+sudo EXTERNAL_URL="http://${target_server}" yum install -y gitlab-ee
 
 
-if docker top gitlab-test
-then
-    echo "Gitlab already up"
-else
-cat >/opt/gitlab-test/docker-compose.yml <<FF
-web:
-  image: 'gitlab/gitlab-ee:latest'
-  restart: always
-  hostname: 'gitlab.test'
-  environment:
-    GITLAB_OMNIBUS_CONFIG: |
-      external_url 'https://gitlab.test'
-  ports:
-    - '5444:80'
-    - '443:443'
-    - '55:22'
-  volumes:
-    - '/config:/etc/gitlab'
-    - '/logs:/var/log/gitlab'
-    - '/data:/var/opt/gitlab'
-
-FF
-fi
-
-cd /opt/gitlab-test/ \
-&& docker-compose up -d \
-&& echo "Gitlab ready at ${target_server}"
 
 EO_REMOTE

@@ -52,15 +52,15 @@ metadata:
 data:
   prometheus.rules: |-
     groups:
-    - name: devopscube demo alert
+    - name: pod restart alarm
       rules:
-      - alert: High Pod Memory
-        expr: sum(container_memory_usage_bytes) > 1
+      - alert: Pod Restart Problem
+        expr: sum(kube_pod_container_status_restarts_total{namespace="monitoring", pod=~"prometheus-deployment-6df6d8768f-lt7vc"} > 1
         for: 1m
         labels:
-          severity: slack
+          severity: critical
         annotations:
-          summary: High Memory Usage
+          summary: Pod Restart Problem
   prometheus.yml: |-
     global:
       scrape_interval: 5s

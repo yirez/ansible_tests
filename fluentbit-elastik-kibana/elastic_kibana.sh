@@ -3,12 +3,12 @@ set -e
 set -o pipefail
 
 
-echo "**************************************"  
+echo "**************************************"
 echo "Deploys elastic and kibana to given server"
 echo "**************************************"
 echo ""
 echo ""
-
+ 
 
 # Exit script after printing help
 helpFunction()

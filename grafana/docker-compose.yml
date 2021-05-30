@@ -1,0 +1,12 @@
+version: '3'
+services: 
+  kibana-test:
+    image: docker.elastic.co/kibana/kibana:7.13.0
+    container_name: kibana-test
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://192.168.56.106:9200
+      ELASTICSEARCH_HOSTS: '["http://192.168.56.106:9200"]'
+    network_mode: host
+ 

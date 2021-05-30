@@ -3,7 +3,7 @@ set -e
 set -o pipefail
 
 
-echo "**************************************"  
+echo "**************************************" 
 echo "Deploys grafana to k8s cluster"
 echo "**************************************"
 echo ""
